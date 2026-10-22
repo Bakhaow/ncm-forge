@@ -8,3 +8,4 @@ __pycache__/
 vendor/ncm/
 
 logs/
+AGENTS.md

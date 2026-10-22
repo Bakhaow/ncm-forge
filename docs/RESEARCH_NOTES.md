@@ -49,8 +49,8 @@ product, Aug 2026, a browser extension for persistent memory).
 | No training code | anyone who reimplements it (2-3 days with the published recipe) | blocks every fine-tune |
 | No inference story (no serving, no CPU, no quant, memory leak, broken KV cache) | 1-2 days of work | blocks every self-hosted deployment |
 | Tokenizer is task-specific and frozen | requires the training code | one tokenizer per domain |
-| No hosted API | Together AI (co-author Simran Arora is their SVP Research) will serve it | generic hosting is a dead end |
-| No benchmark beyond the paper's 5 tasks | anyone with a corpus | needed for a credible product |
+| No hosted API | the authors are at Together AI, which does host models | no public endpoint as of 2026-10 |
+| No benchmark beyond the paper's 5 tasks | anyone with a corpus | needed for credible comparisons |
 
 ## 4. The research questions nobody has answered
 

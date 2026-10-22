@@ -64,8 +64,8 @@ positions, 135 M params) is simply 8 h of it.
 ## Real corpus (122 k FIM records, 1 233 files, ~19.6 M tokens)
 
 - First corpus attempt was junk: 341 files, 30 % `.json` (an 11 k-record
-  openapi dump, a 15 k-record game animation), 14 % HTML, plus a client repo
-  that must stay out. Rebuilt with code-only suffixes, per-file (200) and per-repo
+  openapi dump, a 15 k-record game animation), 14 % HTML, and a few thousand
+  records of generated or vendored code. Rebuilt with code-only suffixes, per-file (200) and per-repo
   (50 k) caps and generated-dir excludes: 1 233 files, 44 % Java, 26 % JS,
   20 % TS.
 - Tokenizer reached **98.97 % exact reconstruction at step 2 000 of 10 000**
