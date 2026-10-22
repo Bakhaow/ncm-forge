@@ -16,6 +16,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from forge import config as cfgmod
+from forge.optim import make_adamw
 from forge.train_tokenizer import build_dataset
 from forge.vendor import require
 
@@ -56,7 +57,7 @@ def level_ce(logits, idx, levels, vocab_sizes, lvl_first, predict_level0, alpha)
       [level-0 head block (levels[0] positions)] when predict_level0
       [one block per level in levels[lvl_first:]]
     """
-    total = logits.new_zeros(())
+    total = logits.new_zeros((), dtype=torch.float32)
     stats = []
     pos = 0
     if predict_level0:
@@ -118,6 +119,12 @@ def train(cfg):
         p.requires_grad_(False)
 
     net = NextConceptTransformer(vqvae_local=tk.vqvae, config=cfg.model).to(device)
+    # torch.compile is 1.6x faster on the 4070 (197 vs 310 ms per micro-batch at
+    # batch 32) and needs less memory. It must not change the checkpoint format,
+    # so keep the eager module around for state_dict().
+    raw_net = net
+    if bool(cfg.train.get("compile", False)):
+        net = torch.compile(net, dynamic=False)
 
     dataset = build_dataset(cfg, tokenizer)
     loader = DataLoader(
@@ -155,7 +162,7 @@ def train(cfg):
     corruption = cfg.train.get("corruption_rate", 0.0)
 
     params = [p for p in net.parameters() if p.requires_grad]
-    opt = torch.optim.AdamW(
+    opt = make_adamw(
         params,
         lr=float(cfg.train.lr),
         weight_decay=float(cfg.train.get("weight_decay", 0.1)),
@@ -237,10 +244,10 @@ def train(cfg):
                 running_n = 0
             if step % save_every == 0 or step == steps:
                 torch.save(
-                    {"model": net.state_dict(), "step": step, "config": cfg.model},
+                    {"model": raw_net.state_dict(), "step": step, "config": cfg.model},
                     out_dir / "generator.pt",
                 )
-    torch.save({"model": net.state_dict(), "step": step, "config": cfg.model}, out_dir / "generator.pt")
+    torch.save({"model": raw_net.state_dict(), "step": step, "config": cfg.model}, out_dir / "generator.pt")
     print(f"[generator] saved {out_dir / 'generator.pt'}")
     return out_dir / "generator.pt"
 

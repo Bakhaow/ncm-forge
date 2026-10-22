@@ -20,6 +20,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from forge import config as cfgmod
+from forge.optim import make_adamw
 from forge import data as datamod
 from forge.vendor import require
 
@@ -144,7 +145,7 @@ def train(cfg):
     print(f"[tokenizer] {len(dataset)} windows, batch={cfg.train.batch_size}, device={device}")
 
     params = [p for p in model.parameters() if p.requires_grad]
-    opt = torch.optim.AdamW(
+    opt = make_adamw(
         params,
         lr=float(cfg.train.lr),
         weight_decay=float(cfg.train.get("weight_decay", 0.1)),

@@ -142,6 +142,7 @@ train:
   save_every: 2000
   tokenizer_out_dir: out/pilot/tokenizer
   out_dir: out/pilot/generator
+  compile: true
   # measured on the RTX 4070; the estimator uses these instead of a FLOP model
-  measured_gen_it_s: 0.34
+  measured_gen_it_s: 0.40
   measured_tok_it_s: 1.6

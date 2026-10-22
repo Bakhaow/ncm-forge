@@ -89,3 +89,44 @@ positions, 135 M params) is simply 8 h of it.
     data.max_docs=4000 train.steps=10 train.log_every=5
 .venv/bin/python -m forge.cli estimate --config configs/code_pilot.yaml
 ```
+
+## Optimisation (RTX 4070, batch 32, 332 positions)
+
+Décomposition d'un micro-pas (moyenne sur 15 pas, `torch.cuda.Event` par phase,
+avec synchronisation — le total réel est ~15 % plus bas) :
+
+| Phase | ms | % |
+|---|---|---|
+| forward | 237 | 46 % |
+| backward | 171 | 33 % |
+| encode + prefix latents | 65 | 13 % |
+| optimiseur | 35 | 7 % |
+| loss (CE par niveau) | 7 | 1 % |
+| DataLoader | ~1 | 0 % |
+
+Le forward dure 1,4× le backward : le coût est dominé par les 12 blocs du
+transformer (seq 332), pas par les têtes (7 × 8 192). Mesures comparatives :
+
+| Réglage | ms/micro-pas | it/s | VRAM |
+|---|---|---|---|
+| fp32, sans TF32 | OOM à batch 32 | — | >12 G |
+| fp32 + TF32, batch 16 | 243 | 4,1 | 7,0 G |
+| bf16 autocast, batch 32 | 310 | 3,2 | 8,5 G |
+| **bf16 + `torch.compile`** | **197** | **5,1** | **6,7 G** |
+| bf16 + compile, batch 64 | 1 761 | 0,6 | 10,7 G |
+
+- `torch.compile(dynamic=False)` : **1,6× sur le modèle**, et 1,8 Go de VRAM en
+  moins (graphes fusionnés, moins d'activations conservées). Équivalence
+  numérique vérifiée : |Δ logits| max 2,1e-6, argmax identique à 100 %.
+  Premier appel : 33 s de compilation (à amortir sur ≥ quelques centaines de pas).
+- `AdamW(fused=True)` : 7,2 ms contre 15,0 ms pour 200 tenseurs ; gain modeste
+  (~3 % du pas) mais gratuit.
+- Batch 64 : thrashing mémoire, 9× plus lent qu'avec deux pas de 32.
+- Prendre les codes + latents de préfixe en amont économiserait 13 % du pas,
+  mais coûte ~12 Go de cache pour 122 k fenêtres (128 × 384 floats chacune) :
+  non retenu.
+- `torch.compile` sur le tokenizer : 92 ms/pas contre ~78 ms en eager → aucun
+  gain, non activé (l'EMA et les mises à jour de codebook ajoutent du contrôle
+  de flux dynamique).
+
+Bilan bout en bout : **2,8 → 3,17 it/s** (+13 %), soit ~8,6 h pour 200 M tokens.
