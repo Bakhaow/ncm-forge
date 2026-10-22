@@ -1,0 +1,10 @@
+.venv/
+.venv-lite/
+out/
+data/
+__pycache__/
+*.pyc
+.cache/
+vendor/ncm/
+
+logs/
