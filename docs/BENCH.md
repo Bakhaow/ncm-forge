@@ -130,3 +130,29 @@ transformer (seq 332), pas par les têtes (7 × 8 192). Mesures comparatives :
   de flux dynamique).
 
 Bilan bout en bout : **2,8 → 3,17 it/s** (+13 %), soit ~8,6 h pour 200 M tokens.
+
+## Context-length ablation (JavaScript, 2 x 1 200 steps)
+
+Question: how much conditioning context is worth paying for? Two generators,
+same 100 k held-out-free windows, same 1 200 steps (307 k samples), same
+tokenizer, trained at 64+64 and 128+128 tokens; then cross-evaluated on 2 048
+windows that neither saw.
+
+| trained at | eval 64 | eval 128 | eval 256 |
+|---|---|---|---|
+| 64+64  | 5.430 | **5.204** | 5.358 |
+| 128+128 | 5.426 | 5.374 | **5.217** |
+
+Per-level CE at the best point of each arm: level 0 2.86, level 1 2.61, level 7
+1.03 — the context mostly buys the coarse levels, the finest level is flat.
+
+Takeaways:
+
+- Each model is best at **2x its training context**, and degrades beyond it.
+- Training at 128+128 does not beat training at 64+64 at equal step count and
+  costs 40 % more wall clock. **Train at 64+64, infer at 128+128.**
+- The whole effect is small (4 % CE): for a 135 M model on 210 M tokens, context
+  is not where the marginal nat is. Data volume and steps matter more.
+
+Reproduce: `scripts/build_js_corpus.py`, `configs/js_ab_*.yaml`,
+`scripts/ab_context.py --records 2048 --evals 64 128 256`.

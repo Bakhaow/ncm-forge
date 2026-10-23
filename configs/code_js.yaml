@@ -1,0 +1,148 @@
+# Pilot run: the same architecture family as configs/code_171m.yaml, sized so a
+# full run fits in a single day on one RTX 4070 (12 GB, 7 GB host RAM).
+#
+# Measured on the 4070 (see docs/BENCH.md). Both stages read train.steps,
+# train.batch_size and train.grad_accum:
+#   tokenizer  1.6 it/s at effective batch 256  (32 x 8 accumulation)  -> 1.7 h
+#   generator  0.34 it/s at effective batch 256 (32 x 8 accumulation)  -> 8.2 h
+# The published recipe (100k x 512) needs ~180 h on this GPU: rent an A100
+# for the real run.
+#
+# Shrinkings vs the published recipe:
+#   generator   12 layers / 768 wide / codebook 8192   (~135 M params)
+#   budget      10k steps x effective batch 256        (2.56 M samples)
+#
+# Use this to validate the pipeline end to end (loss curves, reconstruction
+# accuracy, generation) before launching the full recipe.
+
+task: code-js
+
+tokenizer:
+  pre_tokenizer:
+    name: hf
+    tokenizer: hf
+    model_id: Qwen/Qwen3-0.6B
+    special_tokens:
+      eos_token: <|im_end|>
+      pad_token: <|endoftext|>
+  vqvae:
+    n_layers: 6
+    embed_dim: 384
+    in_vocab_size: 151680
+    context_length: 64
+    compression_factor: 1
+    dropout: 0.1
+    pre_quant_groupnorm: 8
+    use_qk_norm: true
+    pre_quant_dropout: 0.25
+    enc_positional: false
+    dec_positional: true
+    dec_layers: 4
+    vqvae_vocab_size:
+    - 8192
+    - 8192
+    - 8192
+    - 8192
+    - 8192
+    - 8192
+    - 8192
+    - 8192
+    checkpoint_path: out/pilot/tokenizer/tokenizer.pt
+    vector_quantizer_config:
+      clss: multiscale_residual_vector_quantizer
+      decay: 0.99
+      epsilon: 1.0e-05
+      commitment_cost: 0.25
+      learned_l1_sampling: true
+      learned_l1_cascade: true
+      learned_l1_cascade_base: 4
+      learned_l1_cascade_norm: true
+      learned_l1_cascade_norm_final: true
+      learned_all_sampling: false
+      quant_resi:
+        enabled: true
+        ratio: 0.5
+        share_mode: 0
+        learnable_ratio: false
+      aux:
+        fine_drop:
+          prob: 0.5
+          min_keep: 1
+      levels:
+        use_manual_levels: true
+        manual_levels:
+        - 1
+        - 4
+        - 9
+        - 16
+        - 25
+        - 36
+        - 49
+        - 64
+
+model:
+  n_layer: 12
+  n_head: 12
+  bias: true
+  dropout: 0.1
+  n_embd: 768
+  context_length: 192
+  prefix_len: 128
+  raw_token_prefix: true
+  prefix_pad_token_id: 151643
+  vocab_size:
+  - 8192
+  - 8192
+  - 8192
+  - 8192
+  - 8192
+  - 8192
+  - 8192
+  attn_pattern: block_diagonal
+  use_positional_encoding: true
+  use_level_encoding: true
+  use_rope: true
+  rope_base: 100000
+  use_qk_norm: true
+  ctx_encoder:
+    enabled: false
+    n_layer: 4
+    vocab_size: 151680
+  use_flex_attention: false
+  untied_head_bias: false
+  query_level0: false
+  predict_level0: true
+  tie_heads_to_codebook: false
+
+data:
+  # built by scripts/build_fim_dataset.py --src ~/projects --max-records 150000
+  corpus: data/js_full/fim.jsonl
+  format: jsonl
+  task: fim
+  prefix_len: 64
+  suffix_len: 64
+  target_len: 64
+  cond_order: suffix_first
+  max_docs: 0
+
+train:
+  steps: 14190
+  batch_size: 32          # physical micro-batch; VRAM at 32 is ~8.8 GiB
+  grad_accum: 8           # effective batch 256
+  lr: 3.0e-04
+  weight_decay: 0.1
+  warmup: 500
+  grad_clip: 1.0
+  loss_alpha: 0.0
+  corruption_rate: 0.1
+  vq_weight: 1.0
+  num_workers: 4
+  log_every: 50
+  eval_every: 1000
+  save_every: 2000
+  tokenizer_out_dir: out/js/tokenizer
+  out_dir: out/js/generator
+  compile: true
+  # measured on the RTX 4070; the estimator uses these instead of a FLOP model
+  measured_gen_it_s: 0.40
+  measured_tok_it_s: 1.6
