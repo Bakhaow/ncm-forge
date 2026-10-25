@@ -2,7 +2,7 @@
 # torch is installed separately on CPU-only boxes and CI:
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.4
-transformers>=4.45
+transformers>=5.20.2
 omegaconf>=2.3
 hydra-core>=1.3      # imported by the vendored NCM modules
 numpy>=1.26
