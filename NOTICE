@@ -1,0 +1,26 @@
+ncm-forge
+Copyright (c) 2026 Chahboune Safwane
+
+This product includes software and data developed by third parties.
+
+HazyResearch/ncm ("Next-Concept Modeling")
+  https://github.com/HazyResearch/ncm
+  MIT License. Vendored, unmodified, under vendor/ncm (cloned by
+  scripts/setup.sh, not redistributed here). The vendored modules are imported at
+  runtime to define the model and tokenizer architectures.
+
+Qwen/Qwen3-0.6B tokenizer
+  https://huggingface.co/Qwen/Qwen3-0.6B
+  Apache License 2.0. Used as the frozen pre-tokenizer of the VQ-VAE.
+
+bigcode/starcoderdata
+  https://huggingface.co/datasets/bigcode/starcoderdata
+  Per-file licences, filtered upstream to permissive ones; gated on the Hub and
+  subject to its terms of use. Only derived corpora are used here, never
+  redistributed. Models trained on it inherit those per-file obligations.
+
+PyTorch (BSD-3-Clause), Transformers (Apache-2.0), OmegaConf (BSD-3-Clause),
+NumPy (BSD-3-Clause) are installed from PyPI, not vendored.
+
+The MIT license at the root covers the code in this repository only. Model
+weights produced with it are covered by the licence of their training data.

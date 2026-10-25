@@ -1,5 +1,7 @@
 # ncm-forge
 
+[![CI](https://github.com/Bakhaow/ncm-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/Bakhaow/ncm-forge/actions/workflows/ci.yml)
+
 Training code for **Next-Concept Modeling** (NCM) — the coarse-to-fine parallel
 text generation framework from Stanford's Hazy Research lab
 ([arXiv:2610.14162](https://arxiv.org/abs/2610.14162), MIT).
@@ -31,11 +33,15 @@ ncm-forge/
     test_pipeline.py     non-regression tests (level offsets, FIM alignment)
   scripts/
     bench_generate.py     latency/throughput of a config (random weights)
+    build_js_corpus.py    HF parquet shard -> disjoint FIM windows
+    build_shards.py       FIM records -> int32 memory-mapped shards
+    ab_context.py         cross-evaluate checkpoints at several context lengths
     build_fim_dataset.py  source tree -> FIM records
     generate.py           generation with a trained checkpoint
     probe_levels.py       coarse-to-fine probe on any text + latency
     smoke.sh              end-to-end sanity run
   vendor/ncm            upstream repo (MIT), unmodified
+  notebooks/pilot_colab.ipynb  end-to-end pilot on a free T4 (generated)
   docs/BENCH.md         measured latency, throughput and memory limits (RTX 4070)
   docs/RESEARCH_NOTES.md  state of the art, gaps, experiment plan
 ```

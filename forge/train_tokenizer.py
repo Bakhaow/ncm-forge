@@ -64,6 +64,10 @@ def build_dataset(cfg, tokenizer):
         )
     prefix_len = int(cfg.model.get("prefix_len", 1))
     pad_id = tokenizer.pad_token_id
+
+    if cfg.data.get("shards"):
+        from .shards import ShardDataset
+        return ShardDataset(cfg.data.shards)
     eos_id = tokenizer.eos_token_id
 
     if task == "unconditional":

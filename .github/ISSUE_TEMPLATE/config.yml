@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Upstream NCM (paper code, checkpoints)
+    url: https://github.com/HazyResearch/ncm/issues
+    about: Bugs in the vendored model, tokenizer or the official checkpoints belong upstream.
+  - name: Measured limits of this box
+    url: https://github.com/Bakhaow/ncm-forge/blob/master/docs/BENCH.md
+    about: Batch sizes, OOM points, throughput and the context ablation.

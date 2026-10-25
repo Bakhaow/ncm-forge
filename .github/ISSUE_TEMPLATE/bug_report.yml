@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in the scripts, the configs or the docs is wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please include the exact command and the full
+        traceback: most failures here come from a config key that does not match
+        the data, and the traceback names it.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Command, expected result, actual result.
+      placeholder: |
+        python -m forge.cli train-generator --config ...
+        expected ...
+        got ...
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback / log
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      placeholder: |
+        GPU: RTX 4070 12 GB (or CPU)
+        torch 2.11.0+cu128, python 3.12.3
+        config: configs/<name>.yaml
+        corpus: <size, number of records>
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before posting
+      options:
+        - label: I did not modify `vendor/ncm` (patches belong in `forge/`)
+        - label: I read `docs/BENCH.md` for the known memory/throughput limits
