@@ -9,8 +9,7 @@ command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/";
 if [ ! -d .venv ]; then
   uv venv --python 3.12 .venv
 fi
-uv pip install --python .venv/bin/python torch transformers omegaconf hydra-core \
-  rouge_score sacrebleu regex numpy
+uv pip install --python .venv/bin/python -r requirements.txt
 
 if [ ! -d vendor/ncm ]; then
   mkdir -p vendor
