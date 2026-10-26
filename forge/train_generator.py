@@ -177,6 +177,10 @@ def train(cfg):
     )
     steps = int(cfg.train.steps)
     warmup = int(cfg.train.get("warmup", max(1, steps // 100)))
+    # T4/Turing has no bf16: allow fp16 + GradScaler (train.fp16: true).
+    use_fp16 = bool(cfg.train.get("fp16", False))
+    amp_dtype = torch.float16 if use_fp16 else torch.bfloat16
+    scaler = torch.amp.GradScaler("cuda", enabled=use_fp16 and device.type == "cuda")
 
     def lr_at(step: int) -> float:
         if step < warmup:
@@ -221,12 +225,12 @@ def train(cfg):
 
             x = torch.cat([prefix_lat, x_ncm], dim=1)
 
-            with torch.autocast("cuda", dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            with torch.autocast("cuda", dtype=amp_dtype, enabled=device.type == "cuda"):
                 logits = net(x, prefix_ids=None, prefix_pad_mask=cond_mask)
                 loss, _ = level_ce(
                     logits.float(), idx, levels, vocab_sizes, lvl_first, predict_level0, alpha
                 )
-            (loss / accum).backward()
+            scaler.scale(loss / accum).backward()
             running += float(loss.detach())
             running_n += 1
             micro += 1
@@ -235,8 +239,10 @@ def train(cfg):
             micro = 0
             for g in opt.param_groups:
                 g["lr"] = float(cfg.train.lr) * lr_at(step)
+            scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(params, float(cfg.train.get("grad_clip", 1.0)))
-            opt.step()
+            scaler.step(opt)
+            scaler.update()
             opt.zero_grad(set_to_none=True)
             step += 1
             if step % log_every == 0:

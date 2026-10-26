@@ -212,3 +212,16 @@ Throughput note: the tokenizer ran at 0.12 opt-steps/s against a measured
 1.6 micro-batch/s, i.e. ~13x slower than the ablation run. The box was swapping
 (7 GB RAM, 4 DataLoader workers forked over a 560 MB token tensor, 1.5 GB of
 swap in use). Run it with `train.num_workers=0`.
+
+### Free-GPU notes (T4, Colab / Kaggle)
+
+Turing cards have no bf16, so `train.fp16: true` (fp16 + GradScaler) exists in
+both trainers. Measured at batch 32 on the 4070 with fp16: 0.24 it/s and
+8.8 GiB, i.e. *slower* and fatter than bf16 (0.54 it/s, 7.2 GiB) because of the
+scaler and the un-fused path. It is a compatibility switch, not a speedup.
+
+Sizing for a 16 GiB T4 at batch 32: the generator needs ~9 GiB at fp16, the
+tokenizer ~7 GiB, both fit. `torch.compile` pays off after ~50 steps, so keep
+it on for runs longer than a few hundred steps. Free Colab kills sessions
+without warning: use `train.save_every` + `train.init_from` + `train.start_step`
+to chain 12 h windows (that path is tested end to end).
