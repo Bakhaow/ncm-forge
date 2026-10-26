@@ -11,10 +11,15 @@ Upstream ships the model code and the checkpoints but **no training code**
 the upstream modules verbatim and adds the two training loops, a dataset
 pipeline, a FIM (fill-in-the-middle) variant and a cost estimator.
 
-**Status: no trained model is shipped here.** The repo is the training code
-plus measured numbers. The latency figures below come from random weights (same
-compute, same memory); the coarse-to-fine probe runs on the official Sudoku
-checkpoint. Any claim about model quality would need a real run.
+**Status: a first pilot is trained locally, no weights are shipped here.** A
+156 M tokenizer (90.6 % reconstruction) and a 136 M generator (one epoch,
+210 M JavaScript tokens, 16 h on one RTX 4070) complete the loop end to end.
+The result is a pilot, not a usable model: held-out CE 5.91 at 128+128 and
+qualitative samples that start in the right idiom then degenerate. Numbers,
+failure modes and the two structural limits are in
+[`docs/BENCH.md`](docs/BENCH.md#first-javascript-pilot-end-to-end-completion-of-the-loop).
+Latency figures come from random weights (same compute, same memory); the
+coarse-to-fine probe runs on the official Sudoku checkpoint.
 
 ```
 ncm-forge/

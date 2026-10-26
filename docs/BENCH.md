@@ -156,3 +156,59 @@ Takeaways:
 
 Reproduce: `scripts/build_js_corpus.py`, `configs/js_ab_*.yaml`,
 `scripts/ab_context.py --records 2048 --evals 64 128 256`.
+
+## First JavaScript pilot, end to end (completion of the loop)
+
+Corpus: one `bigcode/starcoderdata` shard (300 682 files, 23.2 GiB stays on
+HF; only the JavaScript parquet above is downloaded), 3 630 k disjoint FIM
+windows from 100 939 repositories, 210.5 M Qwen3-0.6B tokens after filtering.
+
+Stage 1, tokenizer: 5 000 steps at batch 32 x 8 accumulation, 40 k documents
+(~45 M tokens, 1.17 epochs). 9 h 30 wall clock — see the throughput note below.
+Reconstruction **90.6 %**, codebook utilisation 99.7 %, per-level utilisation
+`[0.98, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]`, final loss 3.58.
+
+Stage 2, generator: 14 190 steps at micro-batch 32 x 8 accumulation = effective
+batch 256, 3.63 M samples (**1.09 epochs** of the 3.33 M-window shard), 7 h 20
+at 0.54 it/s, 7.2 GiB VRAM. Loss 15.2 (step 50) -> 6.04 (end), still falling
+~0.05 per 2 000 steps at 11 k and ~0.005 per 2 000 at the end.
+
+Held-out CE, 2 048 windows from a **different parquet shard**, evaluated with
+the conditioning that training used (no corruption):
+
+| ctx | weighted CE | level 0 | level 1 | level 7 |
+|---|---|---|---|---|
+| 64  | 6.116 | 4.286 | 2.758 | 0.507 |
+| **128** | **5.913** | **4.197** | **2.474** | 0.497 |
+| 256 | 6.210 | 4.363 | 2.876 | 0.502 |
+
+The ablation conclusion holds on the trained model: 2x the training context is
+the sweet spot, and the gain is entirely on the coarse levels.
+
+Greedy exact-code match on 8 shard windows (chance is 0.006 %):
+
+| level | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|
+| match | 0.0 % | 31.2 % | 15.3 % | 20.3 % | 14.0 % | 17.4 % | 8.2 % | 4.9 % |
+
+**This is a pilot, not a usable model.** Exact match is the wrong target for
+FIM (many middles are valid), but the qualitative samples agree: the model
+starts in the right idiom (jQuery, function bodies, imports) and then falls into
+degenerate repetitions. Two structural limits, in order of impact:
+
+1. reconstruction is 90.6 %, i.e. ~1 target token in 10 is already wrong before
+   the generator sees it;
+2. one epoch at 0.54 it/s. The paper's recipe wants many more.
+
+Also note: `scripts/generate.py` originally fed the prompt as one 128-token
+block, which is *not* the FIM layout the model saw (suffix half + prefix half).
+It now splits `--text`/`--suffix` into the two halves, and warns when the suffix
+half is padding — `generate()` does not apply the training-time pad mask, so a
+padded half is out of distribution. Prefix-only completion (no suffix) is
+therefore not supported by this checkpoint; the right fix is a training mix with
+a truly masked empty suffix, not a decode-time hack.
+
+Throughput note: the tokenizer ran at 0.12 opt-steps/s against a measured
+1.6 micro-batch/s, i.e. ~13x slower than the ablation run. The box was swapping
+(7 GB RAM, 4 DataLoader workers forked over a 560 MB token tensor, 1.5 GB of
+swap in use). Run it with `train.num_workers=0`.

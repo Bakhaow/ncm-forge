@@ -123,6 +123,13 @@ def train(cfg):
     # batch 32) and needs less memory. It must not change the checkpoint format,
     # so keep the eager module around for state_dict().
     raw_net = net
+    init_from = cfg.train.get("init_from")
+    if init_from:
+        # warm start: weights only, Adam moments restart. Cheaper than keeping a
+        # 1 GB optimizer state in the published checkpoint format.
+        start = torch.load(init_from, map_location="cpu", weights_only=False)
+        raw_net.load_state_dict(start.get("model", start))
+        print(f"[generator] warm start from {init_from} (step {start.get('step', '?')})", flush=True)
     if bool(cfg.train.get("compile", False)):
         net = torch.compile(net, dynamic=False)
 
@@ -183,7 +190,7 @@ def train(cfg):
     save_every = int(cfg.train.get("save_every", 2000))
 
     net.train()
-    step = 0
+    step = int(cfg.train.get("start_step", 0))
     t0 = time.time()
     running = 0.0
     running_n = 0

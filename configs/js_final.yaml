@@ -136,10 +136,10 @@ train:
   loss_alpha: 0.0
   corruption_rate: 0.1
   vq_weight: 1.0
-  num_workers: 4
+  num_workers: 0          # memmap shards: a single process streams 2 MB/s
   log_every: 50
   eval_every: 1000
-  save_every: 2000
+  save_every: 1000        # 8 h run: never lose more than ~35 min
   tokenizer_out_dir: out/js/tokenizer
   out_dir: out/js/generator
   compile: true

@@ -138,6 +138,12 @@ def train(cfg):
         tokenizer.pad_token = tokenizer.eos_token
 
     model = build_model(cfg).to(device)
+    init_from = cfg.train.get("init_from")
+    if init_from:
+        # warm start: model weights only, the optimizer moments restart fresh.
+        start = torch.load(init_from, map_location="cpu", weights_only=True)
+        model.load_state_dict(start.get("model", start))
+        print(f"[tokenizer] warm start from {init_from} (step {start.get('step', '?')})", flush=True)
     dataset = build_dataset(cfg, tokenizer)
     loader = DataLoader(
         dataset,
@@ -179,7 +185,7 @@ def train(cfg):
     log_every = int(cfg.train.get("log_every", 50))
 
     model.train()
-    step = 0
+    step = int(cfg.train.get("start_step", 0))
     t0 = time.time()
     running = 0.0
     running_n = 0
